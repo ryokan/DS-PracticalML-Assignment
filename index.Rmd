@@ -93,11 +93,11 @@ model1
 model1$finalModel
 ```
 
-<!-- 
-Note: the result
 
-> result1
+### Note: 
 
+The result here is a note from my succeeded examples, which cannot be reproduced 
+```
 CART 
 
 19622 samples
@@ -150,7 +150,8 @@ Prevalence             0.2845  0.19354   0.1743  0.16381  0.18386
 Detection Rate         0.2571  0.06627   0.0729  0.03925  0.05353
 Detection Prevalence   0.5351  0.14002   0.1596  0.11096  0.05438
 Balanced Accuracy      0.7577  0.62548   0.6566  0.57694  0.64504
-
+```
+<!-- 
 > model1$finalModel
 n= 19622 
 
@@ -179,7 +180,7 @@ Created decision is shown below.
 # text(model1$finalModel, use.n=TRUE, all=TRUE, cex=.8)
 
 #install.packages("rattle")
-library(rattle, vorbose = FALSE)
+library(rattle, verbose = FALSE)
 fancyRpartPlot(model1$finalModel)
 ```
 
