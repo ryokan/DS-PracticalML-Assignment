@@ -1,23 +1,206 @@
 ---
-title: "Report"
+title: "Machine Learning to utilize the data of wearable devices"
 output: html_document
 author: Yoshihiro Ueda
 ---
+by Yoshihiro Ueda
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Summary 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+The purpose is to utilize wearable device data to predict the activity of the wearer.  The training data contains sensed data from the human body and given 5 activity class for his/her activity. The objective here is to predict the activity class for the testing data. The modeling method used is CART.  The accuracy for this model is 0.497.  Final submission shows that only 8 of 20 predictions are correct.
+
+## The data
+
+Two data sets are used in this report.
+for training: pml-training.csv - 19622 records with 160 columns
+for testing:  pml-testing.csv  - 20 records with the same 160 columns
+
+The data uded in this report come from the source: "Human Activity Recognition" (http://groupware.les.inf.puc-rio.br/har) by Groupware@LES: group of research and development of groupware technologies.
+
+Here I would like to express my appreciation to their generosity in allowing their data to be used for this kind of assignment.
+
+The training data contains sensed data from the human body and labelled his/her activity as "A" to "E" in the coulmn "classe".  The testing data has the same format in spite that it dosn't contain the activity label, which is left to be predicted.
+
+## Preparation
+
+First, the data files are assumed to be downloaded and stored /data/ subdirectory of the working directory.
+
+```{r, echo=TRUE, cache=TRUE}
+library(caret)
+# setwd("~/Projects/PracticalMachineLearning/assignment/")
+pml.training <- read.csv("./data/pml-training.csv")
+pml.testing <- read.csv("./data/pml-testing.csv")
+```
+
+## Preprocessing
+
+The training data seems to have many fields that don't seem to contribute classify, i.e. whose values seem to be the same.  Here the testing data has more such fields.  These fields can be detected using nearZeroVar function.  
+
+```{r, echo=TRUE, cache=TRUE}
+# removing variables not affect learning
+nzv <- nearZeroVar(pml.testing,saveMetrics=TRUE)
+usecolumns <- colnames (pml.training) [!nzv$nzv]
+```
+
+Note: In actual cases, the testing data is not unknown and the nearZeroVar varibales should not be removed.
+
+Also the record name, user name, timestamp and window info should not be included in the training data (even id they may contribute the learning).  
+
+Addinitionally, I have removed several variables ("pitch_belt") which make the fit fail.
+
+```{r, echo=TRUE, cache=TRUE}
+usecolumns <- usecolumns[-c(1:6)] # record name, user name, timestamp and windows
+usecolumns <- usecolumns[is.na(match(usecolumns, "roll_belt"))]
+usecolumns <- usecolumns[is.na(match(usecolumns, "pitch_belt"))]
+usecolumns <- usecolumns[is.na(match(usecolumns, "yaw_belt"))]
+usecolumns <- usecolumns[is.na(match(usecolumns, "total_accel_belt"))]
+selected <- pml.training[, usecolumns]
+```
+
+The number of variables are now 52 from 160.  One of them "classe" is for the target and the variables to be used for training are 63 varibales.
+
+## Cross varidation
+
+The data will be divided into the training set (75%) and the test set (25%) for cross validation.
+
+```{r, echo=TRUE, cache=TRUE}
+set.seed(2020)
+inTrain <- createDataPartition (selected$classe, p = 0.75, list = FALSE)
+training <- selected[inTrain,]
+testing <- selected[-inTrain,]
+```
+
+The target classes are 5 and it is appropriate to use a tree model.  Here I use CART.
+
+However the following train function dos not work well.
+
+```{r, echo=TRUE, cache=TRUE}
+# model0 <- train(classe~., data=training, preProcess=c("knnImpute"), method="rpart", prox=TRUE)
+```
+
+### Training
+
+I used all the data to create the model because cross validation trials all fail.
+And more I removed preProcess=c("knnImpute") and prox=TRUE.
+
+```{r, echo=TRUE, cache=TRUE}
+model1 <- train(classe~., data=selected, method="rpart")
+```
+The resulted model is:
+
+```{r, echo=TRUE, cache=TRUE}
+model1
+model1$finalModel
+```
+
+Note: the result
+
+> result1
+
+CART 
+
+19622 samples
+   48 predictor
+    5 classes: 'A', 'B', 'C', 'D', 'E' 
+
+No pre-processing
+Resampling: Bootstrapped (25 reps) 
+
+Summary of sample sizes: 19622, 19622, 19622, 19622, 19622, 19622, ... 
+
+Resampling results across tuning parameters:
+
+  cp          Accuracy   Kappa      Accuracy SD  Kappa SD  
+  0.02983905  0.4977289  0.3450669  0.01546076   0.02191889
+  0.03567868  0.4703454  0.3081836  0.01264860   0.01908159
+  0.06318544  0.3900701  0.1769235  0.08894657   0.14749460
+
+Accuracy was used to select the optimal model using  the largest value.
+The final value used for the model was cp = 0.02983905. 
+
+Confusion Matrix and Statistics
+
+          Reference
+Prediction    A    B    C    D    E
+         A 1513  471  486  422  257
+         B   24  390   30  162  218
+         C   95  134  429  149  132
+         D   37  144   81  231  160
+         E    5    0    0    0  315
+
+Overall Statistics
+                                          
+               Accuracy : 0.489           
+                 95% CI : (0.4762, 0.5019)
+    No Information Rate : 0.2845          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.3318          
+ Mcnemar's Test P-Value : < 2.2e-16       
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C Class: D Class: E
+Sensitivity            0.9038  0.34241   0.4181  0.23963  0.29113
+Specificity            0.6115  0.90855   0.8950  0.91425  0.99896
+Pos Pred Value         0.4805  0.47330   0.4569  0.35375  0.98438
+Neg Pred Value         0.9412  0.85201   0.8793  0.85990  0.86217
+Prevalence             0.2845  0.19354   0.1743  0.16381  0.18386
+Detection Rate         0.2571  0.06627   0.0729  0.03925  0.05353
+Detection Prevalence   0.5351  0.14002   0.1596  0.11096  0.05438
+Balanced Accuracy      0.7577  0.62548   0.6566  0.57694  0.64504
+
+> model1$finalModel
+n= 19622 
+
+node), split, n, loss, yval, (yprob)
+      * denotes terminal node
+
+ 1) root 19622 14042 A (0.28 0.19 0.17 0.16 0.18)  
+   2) pitch_forearm< -33.95 1578    10 A (0.99 0.0063 0 0 0) *
+   3) pitch_forearm>=-33.95 18044 14032 A (0.22 0.21 0.19 0.18 0.2)  
+     6) accel_belt_z>=-187.5 17009 13003 A (0.24 0.22 0.2 0.19 0.15)  
+      12) magnet_dumbbell_y< 439.5 14253 10328 A (0.28 0.18 0.23 0.19 0.13)  
+        24) roll_forearm< 123.5 8980  5460 A (0.39 0.17 0.18 0.16 0.095) *
+        25) roll_forearm>=123.5 5273  3546 C (0.077 0.18 0.33 0.23 0.19)  
+          50) magnet_dumbbell_y< 290.5 3093  1615 C (0.091 0.13 0.48 0.15 0.15) *
+          51) magnet_dumbbell_y>=290.5 2180  1430 D (0.056 0.24 0.11 0.34 0.25) *
+      13) magnet_dumbbell_y>=439.5 2756  1470 B (0.029 0.47 0.039 0.21 0.26) *
+     7) accel_belt_z< -187.5 1035     7 E (0.0058 0.00097 0 0 0.99) *
+     
+## Decision tree
+
+Created decision is shown below.
 
 ```{r}
-setwd("~/OneDrive/Projects/courses/08_PracticalMachineLearning/assignment")
-pml.testing <- read.csv("./data/pml-testing.csv")
-pml.testing <- read.csv("./data/pml-testing.csv")
+#install.packages("rattle")
+library(rattle)
+fancyRpartPlot(model1$finalModel)
+
+plot(model1$finalModel, uniform=TRUE, 
+      main="Classification Tree")
+text(model1$finalModel, use.n=TRUE, all=TRUE, cex=.8)
 ```
 
-You can also embed plots, for example:
+## Prediction
 
-```{r, echo=FALSE}
-plot(cars)
+The model is applied to the test set pml.testing.
+
+```{r, echo=TRUE, cache=TRUE}
+prediction <- predict(model1, newdata=pml.testing)
+prediction
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Submission
+
+First submission shows that only 8 of my prediction is correct.
+
+```{r, cache=TRUE}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE,eol = "\r\n")
+  }
+}
+pml_write_files(prediction)
