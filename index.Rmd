@@ -3,30 +3,30 @@ title: "Machine Learning to utilize the data of wearable devices"
 output: html_document
 author: Yoshihiro Ueda
 ---
-by Yoshihiro Ueda
 
 ## Summary 
 
-The purpose is to utilize wearable device data to predict the activity of the wearer.  The training data contains sensed data from the human body and given 5 activity class for his/her activity. The objective here is to predict the activity class for the testing data. The modeling method used is CART.  The accuracy for this model is 0.497.  Final submission shows that only 8 of 20 predictions are correct.
+The purpose of this report is to utilize wearable device data to predict the activity of the wearer.  The training data contains sensed data from the human body and given 5 activity classes for his/her activities. The model from the training data will be applied to the testing data to predict the activity class for each record. The modeling method used here is CART.  The accuracy for this model is 0.497.  Final submission shows that only 8 of 20 predictions are correct.
 
 ## The data
 
 Two data sets are used in this report.
-for training: pml-training.csv - 19622 records with 160 columns
-for testing:  pml-testing.csv  - 20 records with the same 160 columns
+
+* for training: pml-training.csv - 19622 records with 160 columns
+* for testing:  pml-testing.csv  - 20 records with the same 160 columns
 
 The data uded in this report come from the source: "Human Activity Recognition" (http://groupware.les.inf.puc-rio.br/har) by Groupware@LES: group of research and development of groupware technologies.
 
 Here I would like to express my appreciation to their generosity in allowing their data to be used for this kind of assignment.
 
-The training data contains sensed data from the human body and labelled his/her activity as "A" to "E" in the coulmn "classe".  The testing data has the same format in spite that it dosn't contain the activity label, which is left to be predicted.
+The training data contains sensed data from the human body and labelled his/her activity as "A" to "E" in the coulmn "classe".  The testing data has the same format in spite that it doesn't contain the activity label, which is left to be predicted.
 
 ## Preparation
 
-First, the data files are assumed to be downloaded and stored /data/ subdirectory of the working directory.
+First, the data files are assumed to be downloaded and stored in /data/ subdirectory of the working directory.
 
 ```{r, echo=TRUE, cache=TRUE}
-library(caret)
+library(caret, verbose = FALSE)
 # setwd("~/Projects/PracticalMachineLearning/assignment/")
 pml.training <- read.csv("./data/pml-training.csv")
 pml.testing <- read.csv("./data/pml-testing.csv")
@@ -42,11 +42,11 @@ nzv <- nearZeroVar(pml.testing,saveMetrics=TRUE)
 usecolumns <- colnames (pml.training) [!nzv$nzv]
 ```
 
-Note: In actual cases, the testing data is not unknown and the nearZeroVar varibales should not be removed.
+Note: In actual cases, the testing data is not unknown and it is not appropriate to remove the nearZeroVar varibalesin the testing set.
 
 Also the record name, user name, timestamp and window info should not be included in the training data (even id they may contribute the learning).  
 
-Addinitionally, I have removed several variables ("pitch_belt") which make the fit fail.
+Addinitionally, I have removed several variables ("pitch_belt", etc.) which made the fit fail.
 
 ```{r, echo=TRUE, cache=TRUE}
 usecolumns <- usecolumns[-c(1:6)] # record name, user name, timestamp and windows
@@ -57,7 +57,7 @@ usecolumns <- usecolumns[is.na(match(usecolumns, "total_accel_belt"))]
 selected <- pml.training[, usecolumns]
 ```
 
-The number of variables are now 52 from 160.  One of them "classe" is for the target and the variables to be used for training are 63 varibales.
+The number of variables are now 49 from 160.  One of them "classe" is for the target and the variables to be used for training are 48 varibales.
 
 ## Cross varidation
 
@@ -72,7 +72,7 @@ testing <- selected[-inTrain,]
 
 The target classes are 5 and it is appropriate to use a tree model.  Here I use CART.
 
-However the following train function dos not work well.
+However the following train function dos not work well.  Thus I cannot report the cross validation result for far.
 
 ```{r, echo=TRUE, cache=TRUE}
 # model0 <- train(classe~., data=training, preProcess=c("knnImpute"), method="rpart", prox=TRUE)
@@ -93,6 +93,7 @@ model1
 model1$finalModel
 ```
 
+<!-- 
 Note: the result
 
 > result1
@@ -167,19 +168,19 @@ node), split, n, loss, yval, (yprob)
           51) magnet_dumbbell_y>=290.5 2180  1430 D (0.056 0.24 0.11 0.34 0.25) *
       13) magnet_dumbbell_y>=439.5 2756  1470 B (0.029 0.47 0.039 0.21 0.26) *
      7) accel_belt_z< -187.5 1035     7 E (0.0058 0.00097 0 0 0.99) *
-     
+-->
+
 ## Decision tree
 
 Created decision is shown below.
 
 ```{r}
-#install.packages("rattle")
-library(rattle)
-fancyRpartPlot(model1$finalModel)
+# plot(model1$finalModel, uniform=TRUE, main="Classification Tree")
+# text(model1$finalModel, use.n=TRUE, all=TRUE, cex=.8)
 
-plot(model1$finalModel, uniform=TRUE, 
-      main="Classification Tree")
-text(model1$finalModel, use.n=TRUE, all=TRUE, cex=.8)
+#install.packages("rattle")
+library(rattle, vorbose = FALSE)
+fancyRpartPlot(model1$finalModel)
 ```
 
 ## Prediction
