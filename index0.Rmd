@@ -6,7 +6,7 @@ author: Yoshihiro Ueda
 
 ## Summary 
 
-The purpose of this report is to utilize wearable device data to predict the activity of the wearer.  The training data contains sensed data from the human body and given 5 activity classes for his/her activities. The modeling method used here is random forest.  The model from the training data will be applied to the testing data to predict the activity class for each record. The accuracy for this model is 0.99 from this cross-validation result.  Final submission shows that 19 of 20 predictions are correct.
+The purpose of this report is to utilize wearable device data to predict the activity of the wearer.  The training data contains sensed data from the human body and given 5 activity classes for his/her activities. The model from the training data will be applied to the testing data to predict the activity class for each record. The modeling method used here is CART.  The accuracy for this model is 0.497.  Final submission shows that only 8 of 20 predictions are correct.
 
 ## The data
 
@@ -46,7 +46,7 @@ Note: In actual cases, the testing data is not unknown and it is not appropriate
 
 Also the record name, user name, timestamp and window info should not be included in the training data (even id they may contribute the learning).  
 
-Addinitionally, I have removed several variables ("pitch_belt", etc.) which made the fit fail when I have been trying CART method.
+Addinitionally, I have removed several variables ("pitch_belt", etc.) which made the fit fail.
 
 ```{r, echo=TRUE, cache=TRUE}
 usecolumns <- usecolumns[-c(1:6)] # record name, user name, timestamp and windows
@@ -61,68 +61,42 @@ The number of variables are now 49 from 160.  One of them "classe" is for the ta
 
 ## Cross varidation
 
-The data will be divided into the training set (70%) and the test set (30%) for cross validation.
+The data will be divided into the training set (75%) and the test set (25%) for cross validation.
 
 ```{r, echo=TRUE, cache=TRUE}
 set.seed(2020)
-inTrain <- createDataPartition (selected$classe, p = 0.70, list = FALSE)
+inTrain <- createDataPartition (selected$classe, p = 0.75, list = FALSE)
 training <- selected[inTrain,]
 testing <- selected[-inTrain,]
 ```
 
-The target classes are 5 and it is appropriate to use a tree model.  Here I use the random forest method.
+The target classes are 5 and it is appropriate to use a tree model.  Here I use CART.
+
+However the following train function dos not work well.  Thus I cannot report the cross validation result for far.
+
+```{r, echo=TRUE, cache=TRUE}
+# model0 <- train(classe~., data=training, preProcess=c("knnImpute"), method="rpart", prox=TRUE)
+```
 
 ### Training
 
-The training data is supplied to "train" method
+I used all the data to create the model because cross validation trials all fail.
+And more I removed preProcess=c("knnImpute") and prox=TRUE.
 
 ```{r, echo=TRUE, cache=TRUE}
-model0 <- train(classe~., data=training, preProcess=c("knnImpute"), method="rf", prox=TRUE)
+model1 <- train(classe~., data=selected, method="rpart")
 ```
-
 The resulted model is:
 
 ```{r, echo=TRUE, cache=TRUE}
-model0
+model1
+model1$finalModel
 ```
 
-### Cross-Validation
 
-Now the model can be appiled to the reamining test data to produce the predicted classes "predo0".  The predicted results will be evaluated if they match to the actual data using confusionMatrix.
+### Note: 
 
-```{r, echo=TRUE, cache=TRUE}
-pred0 <- predict(model0, newdata=testing)
-
-confusionMatrix(pred0, testing$classe)
-```
-
-## Prediction
-
-The model is applied to the test set pml.testing.
-
-```{r, echo=TRUE, cache=TRUE}
-prediction <- predict(model1, newdata=pml.testing)
-prediction
-```
-
-## Submission
-
-Submission (after the deadline) shows that 19 of 20 predictions are correct.
-
-```{r, cache=TRUE}
-pml_write_files = function(x){
-  n = length(x)
-  for(i in 1:n){
-    filename = paste0("problem_id_",i,".txt")
-    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE,eol = "\r\n")
-  }
-}
-pml_write_files(prediction)
-```
-
-### Additional Note: 
-
-The result here is a sample result from my succeeded trial of CART method.
+The result here is a note from my succeeded examples, which cannot be reproduced 
 ```
 CART 
 
@@ -196,3 +170,39 @@ node), split, n, loss, yval, (yprob)
       13) magnet_dumbbell_y>=439.5 2756  1470 B (0.029 0.47 0.039 0.21 0.26) *
      7) accel_belt_z< -187.5 1035     7 E (0.0058 0.00097 0 0 0.99) *
 -->
+
+## Decision tree
+
+Created decision is shown below.
+
+```{r}
+# plot(model1$finalModel, uniform=TRUE, main="Classification Tree")
+# text(model1$finalModel, use.n=TRUE, all=TRUE, cex=.8)
+
+#install.packages("rattle")
+library(rattle, verbose = FALSE)
+fancyRpartPlot(model1$finalModel)
+```
+
+## Prediction
+
+The model is applied to the test set pml.testing.
+
+```{r, echo=TRUE, cache=TRUE}
+prediction <- predict(model1, newdata=pml.testing)
+prediction
+```
+
+## Submission
+
+First submission shows that only 8 of my prediction is correct.
+
+```{r, cache=TRUE}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE,eol = "\r\n")
+  }
+}
+pml_write_files(prediction)
