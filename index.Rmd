@@ -88,7 +88,7 @@ model0
 
 ### Cross-Validation
 
-Now the model can be appiled to the reamining test data to produce the predicted classes "predo0".  The predicted results will be evaluated if they match to the actual data using confusionMatrix.
+Now the model can be appiled to the remaining test data to produce the predicted classes "predo0".  The predicted results will be evaluated if they match to the actual data using confusionMatrix.
 
 ```{r, echo=TRUE, cache=TRUE}
 pred0 <- predict(model0, newdata=testing)
